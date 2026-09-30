@@ -1,0 +1,21 @@
+# Model activations and checkpoints
+acts/
+activations/
+*.pt
+*.npy
+*.npz
+*.safetensors
+*.h5
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
