@@ -4,6 +4,22 @@
 
 **Research question.** How does the separability of true and false statements change across the layers of a large language model, and does this pattern differ between types of statements?
 
+## Setup
+
+The project uses [uv](https://docs.astral.sh/uv/) for Python and dependencies. Install uv once (`winget install astral-sh.uv` on Windows, `curl -LsSf https://astral.sh/uv/install.sh | sh` on macOS and Linux), then from the repository root:
+
+```
+uv sync
+```
+
+This installs the Python version in `.python-version` if needed, creates `.venv` and installs the exact versions pinned in `uv.lock`. Run anything through `uv run`, for example:
+
+```
+uv run python scripts/build_dataset.py
+```
+
+Add a dependency with `uv add <package>` (for example `uv add torch transformers scikit-learn`) and commit the updated `pyproject.toml` and `uv.lock`.
+
 ## Data
 
 `data/statements.csv` holds 17,049 labelled true/false statements in five statement types:
@@ -33,11 +49,10 @@ Columns:
 
 Counts, class balance, sentence lengths and the caveats to keep in mind are in [`docs/data_summary.md`](docs/data_summary.md).
 
-### Rebuilding
+### Rebuilding the data
 
 ```
-pip install -r requirements.txt
-python scripts/build_dataset.py
+uv run python scripts/build_dataset.py
 ```
 
 ### Source and licence
@@ -58,6 +73,9 @@ docs/
   data_summary.md           readable data summary and caveats
 scripts/
   build_dataset.py          builds everything in data/ and docs/ from the raw CSVs
+pyproject.toml              project metadata and dependencies
+uv.lock                     pinned dependency versions
+.python-version             Python version used by uv
 ```
 
 Activations extracted from the models are large and are not stored in git (see `.gitignore`).
