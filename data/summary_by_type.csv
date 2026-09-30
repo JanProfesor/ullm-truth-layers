@@ -1,0 +1,6 @@
+type,n,n_true,share_true,mean_words,min_words,max_words,n_topics,n_groups
+affirmative,3150,1594,0.506,7.1,3,24,6,2402
+negated,3148,1554,0.494,8.3,3,25,6,2400
+conjunction,3986,2031,0.51,21.4,15,46,6,3986
+disjunction,2805,1407,0.502,19.6,15,45,6,2805
+comparison,3960,1980,0.5,5.0,5,5,1,990
