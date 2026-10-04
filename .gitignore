@@ -19,3 +19,7 @@ venv/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Slurm logs and local smoke-test outputs (toy model, not results)
+logs/
+results/*-test/
