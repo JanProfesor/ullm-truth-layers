@@ -3,7 +3,7 @@
 #SBATCH --partition=gpu_a100
 #SBATCH --gpus=1
 #SBATCH --cpus-per-task=18
-#SBATCH --time=01:00:00
+#SBATCH --time=03:00:00
 #SBATCH --output=logs/%x_%j.out
 
 set -euo pipefail

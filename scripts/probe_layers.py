@@ -63,7 +63,7 @@ def plot_accuracy(res: pd.DataFrame, title: str, path) -> None:
     for ax, subset in zip(axes.flat, subsets):
         ax.axhline(0.5, color=MUTED, lw=1, ls="--")
         ax.grid(axis="y")
-        for clf in CLASSIFIER_NAMES:
+        for clf in res["classifier"].unique():
             d = res[(res["type"] == subset) & (res["classifier"] == clf)].sort_values("layer")
             ax.plot(d["layer"], d["acc_mean"], color=CLASSIFIER_COLORS[clf], label=CLASSIFIER_NAMES[clf])
             ax.fill_between(d["layer"], d["acc_mean"] - d["acc_std"], d["acc_mean"] + d["acc_std"],
@@ -91,7 +91,7 @@ def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--acts", required=True, help="activation folder from extract_activations.py")
     p.add_argument("--out", required=True, help="output folder for the CSV and figure")
-    p.add_argument("--folds", type=int, default=5, help="number of cross-validation folds (default: %(default)s)")
+    p.add_argument("--folds", type=int, default=3, help="number of cross-validation folds (default: %(default)s)")
     p.add_argument("--n-jobs", type=int, default=-1, help="CPU cores to use (default: all)")
     args = p.parse_args()
 
@@ -116,14 +116,14 @@ def main() -> None:
         line = []
         for name, rows in subsets.items():
             X, y = X_layer[rows], df["label"].to_numpy()[rows]
-            for clf in CLASSIFIER_NAMES:
+            for clf in ["logreg"]:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", ConvergenceWarning)
                     scores = cross_val_score(make_classifier(clf), X, y, cv=folds[name], n_jobs=args.n_jobs)
                 records.append({"layer": layer, "type": name, "classifier": clf, "n": len(rows),
                                 "acc_mean": scores.mean(), "acc_std": scores.std()})
-            line.append(f"{name[:4]} {records[-2]['acc_mean']:.2f}/{records[-1]['acc_mean']:.2f}")
-        print(f"layer {layer:02d}  (logreg/svm)  " + "  ".join(line) + f"   [{time.time() - t0:.0f}s]", flush=True)
+            line.append(f"{name[:4]} {records[-1]['acc_mean']:.2f}")
+        print(f"layer {layer:02d}  (logreg)      " + "  ".join(line) + f"   [{time.time() - t0:.0f}s]", flush=True)
 
     res = pd.DataFrame(records)
     res.to_csv(out / "probe_accuracy.csv", index=False)

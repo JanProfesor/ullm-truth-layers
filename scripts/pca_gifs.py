@@ -92,7 +92,7 @@ def make_gif(acts, subset, rows, probe, path, fps):
         if ax2 is not None:
             ax2.clear()
             ax2.axhline(0.5, color=MUTED, lw=1, ls="--")
-            for clf in CLASSIFIER_NAMES:
+            for clf in acc["classifier"].unique():
                 d = acc[acc["classifier"] == clf].sort_values("layer")
                 ax2.plot(d["layer"], d["acc_mean"], color=CLASSIFIER_COLORS[clf], lw=1.6, label=CLASSIFIER_NAMES[clf])
                 cur = d[d["layer"] == layer]
