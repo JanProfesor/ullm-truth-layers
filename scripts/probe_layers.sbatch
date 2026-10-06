@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=probe_acts
-#SBATCH --partition=rome
-#SBATCH --nodes=1
-#SBATCH --cpus-per-task=128
+#SBATCH --partition=gpu_a100
+#SBATCH --gpus=1
+#SBATCH --cpus-per-task=18
 #SBATCH --time=01:00:00
 #SBATCH --output=logs/%x_%j.out
 
@@ -16,6 +16,6 @@ echo "job $SLURM_JOB_ID on $(hostname), started $(date)"
 uv run python scripts/probe_layers.py \
     --acts activations/llama3-8b-instruct \
     --out results/llama3-8b-instruct \
-    --n-jobs 128
+    --n-jobs 18
 
 echo "finished $(date)"
