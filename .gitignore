@@ -1,4 +1,5 @@
-# Model activations and checkpoints
+# Model weights, activations and checkpoints
+models/
 acts/
 activations/
 *.pt

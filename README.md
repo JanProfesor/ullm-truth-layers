@@ -153,12 +153,12 @@ uv run python scripts/topic_probes.py --acts activations/smollm2-test --out resu
 
 ```
 cd ullm-truth-layers && git pull && uv sync
-uv run hf download mistralai/Mistral-7B-Instruct-v0.3 --local-dir ~/models/Mistral-7B-Instruct-v0.3 --exclude "consolidated.safetensors"
-uv run hf download Qwen/Qwen2.5-7B-Instruct --local-dir ~/models/Qwen2.5-7B-Instruct
+uv run hf download mistralai/Mistral-7B-Instruct-v0.3 --local-dir models/Mistral-7B-Instruct-v0.3 --exclude "consolidated.safetensors"
+uv run hf download Qwen/Qwen2.5-7B-Instruct --local-dir models/Qwen2.5-7B-Instruct
 bash scripts/submit_topic_experiments.sh
 ```
 
-The last command submits, per model, a GPU extraction job and a CPU job for E1-E3 that starts when the extraction succeeds. Both models run in bfloat16, because Qwen2.5 overflows in float16. Results land in `results/mistral-7b-instruct-v0.3/` and `results/qwen2.5-7b-instruct/`. For Llama, run `sbatch scripts/topic_probes.sbatch --acts activations/llama3-8b-instruct --out results/llama3-8b-instruct` on its existing activations.
+The last command submits, per model, a GPU extraction job and a CPU job for E1-E3 that starts when the extraction succeeds. The weights go to `models/` in the repository, which git ignores (set `MODELS_DIR` to use another folder). Both models run in bfloat16, because Qwen2.5 overflows in float16. Results land in `results/mistral-7b-instruct-v0.3/` and `results/qwen2.5-7b-instruct/`. For Llama, run `sbatch scripts/topic_probes.sbatch --acts activations/llama3-8b-instruct --out results/llama3-8b-instruct` on its existing activations.
 
 ### How the classifiers are tested
 
