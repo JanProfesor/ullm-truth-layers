@@ -13,6 +13,12 @@ shuffled with a fixed seed). They are computed once per dataset (pooled, and eac
 topic) from the statement ids, so they are identical at every layer and for every
 model extracted from the same statement file.
 
+With --center-topics, every topic's activations are first shifted to zero mean (the
+mean over all its statements, labels unused; every topic is ~50% true), as in Bürger
+et al. This removes the offset between topics along a probe direction, so off-diagonal
+accuracy shows how well the direction itself transfers. AUROC of the transfer is
+unchanged by construction: centering a test topic shifts all its scores by a constant.
+
 Outputs in --out:
   e1_pooled.csv      layer, rel_depth, n, chance, acc_mean, acc_std, auroc_mean, auroc_std
   e2_per_topic.csv   same, plus topic
@@ -165,6 +171,8 @@ def main() -> None:
     p.add_argument("--max-iter", type=int, default=5000, help="lbfgs iterations (default: %(default)s)")
     p.add_argument("--layers", default=None, help="comma-separated layers to run (default: all)")
     p.add_argument("--n-jobs", type=int, default=-1, help="CPU cores to use (default: all)")
+    p.add_argument("--center-topics", action="store_true",
+                   help="subtract each topic's mean activation before training and testing")
     args = p.parse_args()
 
     set_style()
@@ -191,12 +199,16 @@ def main() -> None:
 
     layers = range(acts.n_layers) if args.layers is None else [int(x) for x in args.layers.split(",")]
     print(f"{acts.model_name}: {len(D)} affirmative+negated statements, L = {n_blocks} blocks, "
-          f"topics: {', '.join(f'{t} ({len(r)})' for t, r in topic_rows.items())}; C = {args.C}", flush=True)
+          f"topics: {', '.join(f'{t} ({len(r)})' for t, r in topic_rows.items())}; C = {args.C}"
+          f"{'; topic-centered' if args.center_topics else ''}", flush=True)
 
     e1, e2, e3, max_iter_hit = [], [], [], 0
     t0 = time.time()
     for layer in layers:
         X = acts.layer(layer, keep)
+        if args.center_topics:
+            for r in topic_rows.values():
+                X[r] -= X[r].mean(axis=0)
         others = {t: (X[r], y[r]) for t, r in topic_rows.items()}
         jobs = [(POOLED, k, tr, te, {}) for k, (tr, te) in enumerate(folds[POOLED])]
         jobs += [(t, k, tr, te, {u: others[u] for u in topic_rows if u != t})
@@ -230,15 +242,16 @@ def main() -> None:
     (out / "topic_probes_config.json").write_text(json.dumps({
         "model": acts.meta["model"], "acts": args.acts, "types": TYPES, "n_statements": len(D),
         "n_blocks": n_blocks, "folds": args.folds, "fold_splitter": "StratifiedGroupKFold(shuffle=True)",
-        "seed": SEED, "C": args.C, "max_iter": args.max_iter, "fits_hitting_max_iter": int(max_iter_hit),
+        "seed": SEED, "C": args.C, "center_topics": args.center_topics, "max_iter": args.max_iter, "fits_hitting_max_iter": int(max_iter_hit),
     }, indent=2))
     if max_iter_hit:
         print(f"WARNING: {max_iter_hit} fits reached max_iter={args.max_iter} without converging")
 
-    plot_depth(e1, e2, acts.model_name, out / "e1_e2_depth.png")
-    plot_offdiag(e3, acts.model_name, out / "e3_offdiag.png")
+    name = acts.model_name + (" (topic-centered)" if args.center_topics else "")
+    plot_depth(e1, e2, name, out / "e1_e2_depth.png")
+    plot_offdiag(e3, name, out / "e3_offdiag.png")
     if args.layers is None:
-        plot_matrices(e3, n_blocks, acts.model_name, out / "e3_matrices.png")
+        plot_matrices(e3, n_blocks, name, out / "e3_matrices.png")
     print(f"wrote E1-E3 CSVs and figures to {out} in {time.time() - t0:.0f}s")
 
 
