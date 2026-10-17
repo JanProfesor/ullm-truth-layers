@@ -6,10 +6,12 @@ Outputs in --out:
   compare_e2.png        per-topic accuracy (E2), one panel per model
   compare_e3.png        mean off-diagonal transfer accuracy and AUROC (E3) per model
   compare_summary.csv   per model: emergence depths, peaks and transfer at the peak
+  compare_e3_centering.png  only with --centered: E3 transfer with and without topic
+                        centering, one panel per model
 
 Example:
   uv run python scripts/compare_models.py --results results/llama3-8b-instruct \
-      results/mistral-7b-instruct-v0.3 results/qwen2.5-7b-instruct --out results/comparison
+      results/mistral-7b-instruct-v0.3 results/qwen2.5-7b-instruct --out results/comparison       --centered results/llama3-8b-instruct-centered results/mistral-7b-instruct-v0.3-centered       results/qwen2.5-7b-instruct-centered
 """
 
 import argparse
@@ -42,15 +44,51 @@ def first_depth(d: pd.DataFrame, threshold: float) -> float:
     return float(hit["rel_depth"].min()) if len(hit) else float("nan")
 
 
+def offdiag(e3: pd.DataFrame) -> pd.DataFrame:
+    """Mean of the off-diagonal entries of A_l per relative depth."""
+    return e3[e3["train_topic"] != e3["test_topic"]].groupby("rel_depth")[["acc_mean", "auroc_mean"]].mean()
+
+
+def plot_centering(models, centered, colors, path) -> None:
+    fig, axes = plt.subplots(1, len(models), figsize=(4.2 * len(models), 3.8), sharey=True, squeeze=False)
+    for ax, m, c in zip(axes[0], models, centered):
+        col = colors[m["name"]]
+        off, offc = offdiag(m["e3"]), offdiag(c["e3"])
+        diag = m["e3"][m["e3"]["train_topic"] == m["e3"]["test_topic"]].groupby("rel_depth")["acc_mean"].mean()
+        ax.axhline(0.5, color=MUTED, lw=1, ls="--")
+        ax.grid(axis="y")
+        ax.plot(diag.index, diag.values, color="#222", ls=":", lw=1.3, label="within topic, accuracy")
+        ax.plot(off.index, off["auroc_mean"], color=col, ls="--", lw=1.3, label="transfer, AUROC")
+        ax.plot(offc.index, offc["acc_mean"], color=col, label="transfer, accuracy, topic-centered")
+        ax.plot(off.index, off["acc_mean"], color=col, alpha=0.45, label="transfer, accuracy")
+        ax.fill_between(off.index, off["acc_mean"], offc["acc_mean"].reindex(off.index), color=col, alpha=0.12, lw=0)
+        ax.set(xlabel="relative depth ℓ / L", ylim=(0.4, 1.0), xlim=(0, 1))
+        ax.set_title(m["name"], loc="left")
+    axes[0, 0].set_ylabel("mean over topic pairs")
+    axes[0, -1].legend(loc="lower right", fontsize=7.5)
+    fig.suptitle("Cross-topic transfer (E3) with and without topic centering", x=0.01, ha="left", fontsize=12)
+    fig.text(0.01, -0.03, "Shaded = accuracy recovered by centering each topic at its mean (the offset between topics). "
+             "The gap that remains to the within-topic line is a difference in direction.",
+             fontsize=8, color=MUTED)
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--results", nargs="+", required=True, help="topic_probes.py output folders")
     p.add_argument("--out", required=True, help="output folder")
+    p.add_argument("--centered", nargs="+", default=None,
+                   help="topic_probes.py --center-topics output folders, in the same order as --results")
     args = p.parse_args()
+    if args.centered and len(args.centered) != len(args.results):
+        p.error("--centered needs one folder per --results folder")
 
     set_style()
-    out = out_dir(args.out)
     models = [load(Path(r)) for r in args.results]
+    centered = [load(Path(r)) for r in args.centered] if args.centered else None
+    out = out_dir(args.out)
     colors = dict(zip([m["name"] for m in models], MODEL_COLORS))
 
     # E1
@@ -128,6 +166,14 @@ def main() -> None:
     fig.tight_layout()
     fig.savefig(out / "compare_e3.png")
     plt.close(fig)
+
+    if centered:
+        plot_centering(models, centered, colors, out / "compare_e3_centering.png")
+        for row, c in zip(rows, centered):
+            off = offdiag(c["e3"])
+            row.update({"e3c_offdiag_peak_acc": off["acc_mean"].max(),
+                        "e3c_offdiag_peak_depth": off["acc_mean"].idxmax(),
+                        "e3c_offdiag_acc_last": off["acc_mean"].iloc[-1]})
 
     summary = pd.DataFrame(rows)
     summary.to_csv(out / "compare_summary.csv", index=False)

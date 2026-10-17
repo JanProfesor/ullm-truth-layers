@@ -16,8 +16,9 @@ model extracted from the same statement file.
 With --center-topics, every topic's activations are first shifted to zero mean (the
 mean over all its statements, labels unused; every topic is ~50% true), as in Bürger
 et al. This removes the offset between topics along a probe direction, so off-diagonal
-accuracy shows how well the direction itself transfers. AUROC of the transfer is
-unchanged by construction: centering a test topic shifts all its scores by a constant.
+accuracy shows how well the direction itself transfers. Transfer AUROC barely changes
+(by at most ~0.005): centering a test topic shifts all its scores by a constant, and only
+the slight shift of the training folds changes the probe itself.
 
 Outputs in --out:
   e1_pooled.csv      layer, rel_depth, n, chance, acc_mean, acc_std, auroc_mean, auroc_std
