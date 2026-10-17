@@ -28,6 +28,8 @@ MODEL_COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#a35bd6"]
 def load(folder: Path) -> dict:
     cfg = json.loads((folder / "topic_probes_config.json").read_text())
     name = cfg["model"].rstrip("/\\").replace("\\", "/").split("/")[-1]
+    if cfg.get("center_topics"):
+        name += " (centered)"
     # layer 0 is the embedding output; the report uses layers 1..L
     read = lambda f: pd.read_csv(folder / f).query("layer > 0")  # noqa: E731
     return {"name": name, "e1": read("e1_pooled.csv"), "e2": read("e2_per_topic.csv"),
