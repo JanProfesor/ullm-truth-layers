@@ -1,0 +1,17 @@
+{
+  "model": "/home/lpopdimitrova/models/Meta-Llama-3-8B-Instruct",
+  "acts": "activations/llama3-8b-instruct",
+  "types": [
+    "affirmative",
+    "negated"
+  ],
+  "n_statements": 6298,
+  "n_blocks": 32,
+  "folds": 6,
+  "fold_splitter": "StratifiedGroupKFold(shuffle=True)",
+  "seed": 0,
+  "C": 1.0,
+  "center_topics": true,
+  "max_iter": 5000,
+  "fits_hitting_max_iter": 0
+}
