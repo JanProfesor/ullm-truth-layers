@@ -1,0 +1,16 @@
+{
+  "model": "/gpfs/home2/lpopdimitrova/research_methods/ullm-truth-layers/models/Qwen2.5-7B-Instruct",
+  "acts": "activations/qwen2.5-7b-instruct",
+  "types": [
+    "affirmative",
+    "negated"
+  ],
+  "n_statements": 6298,
+  "n_blocks": 28,
+  "folds": 6,
+  "fold_splitter": "StratifiedGroupKFold(shuffle=True)",
+  "seed": 0,
+  "C": 1.0,
+  "max_iter": 5000,
+  "fits_hitting_max_iter": 0
+}

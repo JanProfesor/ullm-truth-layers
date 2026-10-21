@@ -1,0 +1,16 @@
+{
+  "model": "/gpfs/home2/lpopdimitrova/research_methods/ullm-truth-layers/models/Mistral-7B-Instruct-v0.3",
+  "acts": "activations/mistral-7b-instruct-v0.3",
+  "types": [
+    "affirmative",
+    "negated"
+  ],
+  "n_statements": 6298,
+  "n_blocks": 32,
+  "folds": 6,
+  "fold_splitter": "StratifiedGroupKFold(shuffle=True)",
+  "seed": 0,
+  "C": 1.0,
+  "max_iter": 5000,
+  "fits_hitting_max_iter": 0
+}

@@ -2,7 +2,8 @@
 
 Each statement is fed as plain text (no chat template). For every statement we keep
 the hidden state of its last real token at the embedding output and after every
-transformer block (n_blocks + 1 vectors), and save one float16 file per layer:
+transformer block (n_blocks + 1 vectors), and save one file per layer (float16 by
+default, see --save-dtype):
 
   <out>/layer_00.npy ... layer_<L>.npy   shape (n_statements, hidden_size)
   <out>/statements.csv                   row i matches row i of every layer file
@@ -46,6 +47,12 @@ def main() -> None:
     p.add_argument("--data", default="data/statements.csv", help="statement CSV (default: %(default)s)")
     p.add_argument("--batch-size", type=int, default=32, help="statements per forward pass (default: %(default)s)")
     p.add_argument("--limit", type=int, default=None, help="random subset of this many statements (fixed seed), for testing")
+    p.add_argument("--dtype", choices=["auto", "float16", "bfloat16", "float32"], default="auto",
+                   help="model dtype; auto = float16 on GPU, float32 on CPU (default: %(default)s). "
+                        "Use bfloat16 for Qwen2.5, which overflows in float16")
+    p.add_argument("--save-dtype", choices=["float16", "float32"], default="float16",
+                   help="dtype of the saved activations (default: %(default)s); float32 avoids "
+                        "overflow for models with very large activations")
     args = p.parse_args()
 
     torch.manual_seed(SEED)
@@ -61,7 +68,11 @@ def main() -> None:
     print(f"{len(df)} of {n_total} statements from {args.data}")
 
     device = pick_device()
-    dtype = torch.float32 if device.type == "cpu" else torch.float16
+    if args.dtype == "auto":
+        dtype = torch.float32 if device.type == "cpu" else torch.float16
+    else:
+        dtype = getattr(torch, args.dtype)
+    save_np, save_torch = (np.float16, torch.float16) if args.save_dtype == "float16" else (np.float32, torch.float32)
     print(f"loading {model_path} on {device} as {dtype}")
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     tokenizer.padding_side = "right"
@@ -76,7 +87,7 @@ def main() -> None:
 
     n_layers = model.config.num_hidden_layers + 1
     hidden = model.config.hidden_size
-    acts = np.zeros((n_layers, len(df), hidden), dtype=np.float16)
+    acts = np.zeros((n_layers, len(df), hidden), dtype=save_np)
     print(f"{n_layers} layers (embedding + {n_layers - 1} blocks), hidden size {hidden}, "
           f"{acts.nbytes / 1e9:.2f} GB in memory")
 
@@ -92,7 +103,7 @@ def main() -> None:
             last = enc["attention_mask"].sum(dim=1) - 1
             rows = torch.arange(len(idx), device=device)
             for layer, h in enumerate(outputs.hidden_states):
-                acts[layer, idx] = h[rows, last].to(torch.float16).cpu().numpy()
+                acts[layer, idx] = h[rows, last].to(save_torch).cpu().numpy()
             if (b + 1) % 20 == 0 or b + 1 == n_batches:
                 done = start + len(idx)
                 rate = done / (time.time() - t0)
@@ -117,7 +128,7 @@ def main() -> None:
         "seed": SEED,
         "n_layers": n_layers,
         "hidden_size": hidden,
-        "dtype_saved": "float16",
+        "dtype_saved": args.save_dtype,
         "dtype_model": str(dtype).replace("torch.", ""),
         "device": device.type,
         "batch_size": args.batch_size,

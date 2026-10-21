@@ -141,6 +141,25 @@ uv run python scripts/pca_gifs.py --acts activations/llama3-8b-instruct --out re
 
 Run `probe_layers.py` first, because the GIFs show its accuracy curves. `results/README.md` explains how to read the figures.
 
+### Topic experiments E1-E3 (report, Section 3.4)
+
+`scripts/topic_probes.py` runs the three experiments of the report on the affirmative and negated statements (6,298): a pooled probe (E1), one probe per topic (E2) and the 6×6 cross-topic transfer matrix with accuracy and AUROC (E3), at every layer. Probes are StandardScaler + logistic regression (C = 1), evaluated with 6-fold `StratifiedGroupKFold`. It writes `e1_pooled.csv`, `e2_per_topic.csv`, `e3_transfer.csv`, `folds.csv` and three figures to `--out`. It runs on any activation folder:
+
+```
+uv run python scripts/topic_probes.py --acts activations/smollm2-test --out results/smollm2-test
+```
+
+**Mistral and Qwen on Snellius.** Log in, then download the weights once on the login node. Mistral is gated: accept its licence on its Hugging Face page and log in with a token first (`uv run hf auth login`).
+
+```
+cd ullm-truth-layers && git pull && uv sync
+uv run hf download mistralai/Mistral-7B-Instruct-v0.3 --local-dir models/Mistral-7B-Instruct-v0.3 --exclude "consolidated.safetensors"
+uv run hf download Qwen/Qwen2.5-7B-Instruct --local-dir models/Qwen2.5-7B-Instruct
+bash scripts/submit_topic_experiments.sh
+```
+
+The last command submits, per model, a GPU extraction job and a CPU job for E1-E3 that starts when the extraction succeeds. The weights go to `models/` in the repository, which git ignores (set `MODELS_DIR` to use another folder). Both models run in bfloat16, because Qwen2.5 overflows in float16. Results land in `results/mistral-7b-instruct-v0.3/` and `results/qwen2.5-7b-instruct/`. For Llama, run `sbatch scripts/topic_probes.sbatch --acts activations/llama3-8b-instruct --out results/llama3-8b-instruct` on its existing activations.
+
 ### How the classifiers are tested
 
 - **Grouped 5-fold cross-validation.** Each classifier is trained on 80% of the statements and tested on the remaining 20%. This is repeated five times so every statement is tested once, and the reported accuracy is the average.
